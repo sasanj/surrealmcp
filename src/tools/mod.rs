@@ -14,7 +14,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
-use surrealdb::{Surreal, Value, engine::any::Any};
+use surrealdb::{Surreal, engine::any::Any};
+use surrealdb::types::Value;
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, trace, warn};
 
@@ -1450,13 +1451,16 @@ It returns a list of namespaces with their names."#)]
                 // Calculate the elapsed time
                 let duration = start_time.elapsed();
                 // Take the first element of the response
-                let info_opt: Option<ListNamespaces> =
-                    response
-                        .take::<Option<ListNamespaces>>(0)
-                        .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-                let info = info_opt.ok_or_else(|| {
+                let val: Value = response
+                    .take(0)
+                    .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+                let info: ListNamespaces = serde_json::from_str(
+                    &serde_json::to_string(&val)
+                        .map_err(|e| McpError::internal_error(e.to_string(), None))?,
+                )
+                .map_err(|e| {
                     McpError::internal_error(
-                        "No namespaces returned when running INFO FOR ROOT".to_string(),
+                        format!("No namespaces returned when running INFO FOR ROOT: {e}"),
                         None,
                     )
                 })?;
@@ -1532,12 +1536,16 @@ It returns a list of databases with their names."#)]
                 // Calculate the elapsed time
                 let duration = start_time.elapsed();
                 // Take the first element of the response
-                let info_opt: Option<ListDatabases> = response
-                    .take::<Option<ListDatabases>>(0)
+                let val: Value = response
+                    .take(0)
                     .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-                let info = info_opt.ok_or_else(|| {
+                let info: ListDatabases = serde_json::from_str(
+                    &serde_json::to_string(&val)
+                        .map_err(|e| McpError::internal_error(e.to_string(), None))?,
+                )
+                .map_err(|e| {
                     McpError::internal_error(
-                        "No databases returned when running INFO FOR NAMESPACE".to_string(),
+                        format!("No databases returned when running INFO FOR NAMESPACE: {e}"),
                         None,
                     )
                 })?;
