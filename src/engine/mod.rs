@@ -3,8 +3,8 @@ use metrics::{counter, histogram};
 use rmcp::model::Content;
 use std::time::Instant;
 use std::{collections::HashMap, time::Duration};
-use surrealdb::{Surreal, engine::any::Any};
 use surrealdb::types::Value;
+use surrealdb::{Surreal, engine::any::Any};
 use tracing::{debug, error, info};
 
 /// Response from executing a SurrealDB query
