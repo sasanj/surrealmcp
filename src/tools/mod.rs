@@ -14,8 +14,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
-use surrealdb::{Surreal, engine::any::Any};
 use surrealdb::types::Value;
+use surrealdb::{Surreal, engine::any::Any};
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, trace, warn};
 
