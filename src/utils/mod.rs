@@ -89,13 +89,13 @@ pub fn parse_target(value: String) -> Result<String, String> {
 /// # Arguments
 /// * `value` - A vector of strings to parse
 pub fn parse_targets(values: Vec<String>) -> Result<String, String> {
+    use surrealdb::types::ToSql;
     // Create a new vec to store parsed values
     let mut items = Vec::new();
     // Iterate over the input values
     for val in values {
         match surrealdb::parse::value(&val) {
             Ok(val) => {
-                use surrealdb::types::ToSql;
                 items.push(val.to_sql());
             }
             Err(e) => {
