@@ -1,7 +1,8 @@
+"""Smoke tests for the MCP stdio handshake and initialization."""
+
 from __future__ import annotations
 
 import pytest
-
 from smoke.mcp_client import SurrealMcpStdioClient
 
 
@@ -9,6 +10,7 @@ from smoke.mcp_client import SurrealMcpStdioClient
 async def test_initialize_and_initialized_notification(
     mcp_client: SurrealMcpStdioClient,
 ) -> None:
+    """Verify initialization and explicit initialized notification flow."""
     async with mcp_client.connect():
         initialize_result = await mcp_client.initialize()
 

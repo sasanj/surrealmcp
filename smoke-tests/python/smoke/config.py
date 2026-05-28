@@ -1,3 +1,10 @@
+"""Smoke test configuration helpers and dataclasses.
+
+This module provides dataclasses and helpers to load smoke-test
+configuration from the environment and resolve how to start the
+SurrealMCP server used by the tests.
+"""
+
 from __future__ import annotations
 
 import os
@@ -16,6 +23,14 @@ load_dotenv(DOTENV_PATH, override=False)
 
 @dataclass(frozen=True)
 class ServerProcessConfig:
+    """Configuration for launching the server process.
+
+    Attributes:
+        command: Executable or command to run.
+        args: Command-line arguments for the process.
+        cwd: Working directory for the process.
+    """
+
     command: str
     args: list[str]
     cwd: Path
@@ -23,6 +38,12 @@ class ServerProcessConfig:
 
 @dataclass(frozen=True)
 class SmokeSettings:
+    """Runtime settings used by smoke tests.
+
+    Holds SurrealDB connection configuration and the resolved server
+    process configuration.
+    """
+
     surrealdb_url: str
     surrealdb_ns: str
     surrealdb_db: str
@@ -31,6 +52,7 @@ class SmokeSettings:
     server: ServerProcessConfig
 
     def server_env(self) -> dict[str, str]:
+        """Return an environment mapping for running the server process."""
         env = os.environ.copy()
         env.update(
             {
@@ -72,6 +94,10 @@ def _resolve_server_process() -> ServerProcessConfig:
 
 
 def load_settings() -> SmokeSettings:
+    """Load smoke test settings from environment variables.
+
+    Raises a RuntimeError if a required environment variable is missing.
+    """
     return SmokeSettings(
         surrealdb_url=_read_required_env("SURREALDB_URL"),
         surrealdb_ns=_read_required_env("SURREALDB_NS"),

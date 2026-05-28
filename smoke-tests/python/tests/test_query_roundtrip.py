@@ -1,9 +1,10 @@
+"""End-to-end query roundtrip smoke tests (create/select/delete)."""
+
 from __future__ import annotations
 
 from uuid import uuid4
 
 import pytest
-
 from smoke.mcp_client import SurrealMcpStdioClient, extract_text_content
 
 
@@ -11,6 +12,7 @@ from smoke.mcp_client import SurrealMcpStdioClient, extract_text_content
 async def test_query_tool_create_select_delete_roundtrip(
     mcp_client: SurrealMcpStdioClient,
 ) -> None:
+    """Create a record, select it, and delete it using the query tool."""
     record_key = f"smoke_{uuid4().hex[:10]}"
     marker = f"marker_{uuid4().hex[:8]}"
 

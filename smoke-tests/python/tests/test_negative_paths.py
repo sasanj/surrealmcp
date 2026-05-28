@@ -10,7 +10,6 @@ from dataclasses import replace
 
 import pytest
 from mcp.shared.exceptions import McpError
-
 from smoke.config import SmokeSettings
 from smoke.mcp_client import SurrealMcpStdioClient
 

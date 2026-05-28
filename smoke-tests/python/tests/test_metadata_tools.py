@@ -1,9 +1,10 @@
+"""Tests for metadata-related MCP tools (namespaces/databases)."""
+
 from __future__ import annotations
 
 import json
 
 import pytest
-
 from smoke.config import SmokeSettings
 from smoke.mcp_client import SurrealMcpStdioClient, extract_text_content
 
@@ -30,6 +31,7 @@ def _parse_tool_json(result_text: str) -> dict[str, object]:
 async def test_tools_list_contains_metadata_tools(
     mcp_client: SurrealMcpStdioClient,
 ) -> None:
+    """Ensure the metadata tools appear in the server's tool listing."""
     async with mcp_client.connect():
         await mcp_client.initialize()
         result = await mcp_client.list_tools()
@@ -43,6 +45,7 @@ async def test_tools_list_contains_metadata_tools(
 async def test_list_namespaces_payload_shape(
     mcp_client: SurrealMcpStdioClient,
 ) -> None:
+    """Verify the JSON payload shape returned by the list_namespaces tool."""
     async with mcp_client.connect():
         await mcp_client.initialize()
         result = await mcp_client.call_tool("list_namespaces")
@@ -55,6 +58,7 @@ async def test_list_namespaces_payload_shape(
 async def test_list_databases_payload_shape(
     mcp_client: SurrealMcpStdioClient,
 ) -> None:
+    """Verify the JSON payload shape returned by the list_databases tool."""
     async with mcp_client.connect():
         await mcp_client.initialize()
         result = await mcp_client.call_tool("list_databases")
@@ -68,6 +72,7 @@ async def test_metadata_tools_include_configured_namespace_and_database(
     mcp_client: SurrealMcpStdioClient,
     smoke_settings: SmokeSettings,
 ) -> None:
+    """Ensure configured namespace and database are present in tool outputs."""
     async with mcp_client.connect():
         await mcp_client.initialize()
 
@@ -99,6 +104,7 @@ async def test_switch_namespace_and_database_tools(
     mcp_client: SurrealMcpStdioClient,
     smoke_settings: SmokeSettings,
 ) -> None:
+    """Verify switching namespace and database via tools succeeds."""
     async with mcp_client.connect():
         await mcp_client.initialize()
 
