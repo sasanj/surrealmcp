@@ -6,7 +6,7 @@ Prepare a focused follow-up change set to:
 
 1. Replace JSON roundtrip extraction in namespace and database metadata paths with typed extraction.
 2. Keep dependency surface stable by avoiding a new direct surrealdb-types dependency.
-3. Bump package version to 0.5.0 due SurrealDB v3 server requirement.
+3. Bump package version to 0.5.0 due to the SurrealDB v3 server requirement.
 4. Document compatibility expectations clearly for users.
 
 ## Decisions
