@@ -34,6 +34,10 @@
 
 SurrealMCP is the official Model Context Protocol ([MCP](https://modelcontextprotocol.io)) server for SurrealDB and SurrealDB Cloud that enables AI assistants, AI agents, Developer IDEs, AI chatbots, and data platforms to interact with SurrealDB databases and SurrealDB Cloud.
 
+## Compatibility
+
+- Supported SurrealDB server versions: >= 3.0.0-alpha.1 and < 4.0.0.
+
 ## Features
 
 - **Multiple transport modes**: Support for `stdio`, HTTP, and Unix socket connections
