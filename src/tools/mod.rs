@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
-use surrealdb::types::Value;
+use surrealdb::types::{SurrealValue, Value};
 use surrealdb::{Surreal, engine::any::Any};
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, trace, warn};
@@ -29,22 +29,22 @@ use crate::utils::{convert_json_to_surreal, parse_target, parse_targets};
 // Global metrics
 static QUERY_COUNTER: AtomicU64 = AtomicU64::new(0);
 
-#[derive(Deserialize)]
+#[derive(Deserialize, SurrealValue)]
 struct ListNamespaces {
     namespaces: Vec<Namespace>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, SurrealValue)]
 struct Namespace {
     name: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, SurrealValue)]
 struct ListDatabases {
     databases: Vec<Database>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, SurrealValue)]
 struct Database {
     name: String,
 }
@@ -1451,17 +1451,16 @@ It returns a list of namespaces with their names."#)]
             Some(response) => {
                 // Calculate the elapsed time
                 let duration = start_time.elapsed();
-                // Take the first element of the response
-                let val: Value = response
-                    .take(0)
-                    .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-                let info: ListNamespaces = serde_json::from_str(
-                    &serde_json::to_string(&val)
-                        .map_err(|e| McpError::internal_error(e.to_string(), None))?,
-                )
-                .map_err(|e| {
+                // Take and deserialize the first result directly into the typed metadata shape.
+                let info: Option<ListNamespaces> = response.take(0).map_err(|e| {
                     McpError::internal_error(
                         format!("No namespaces returned when running INFO FOR ROOT: {e}"),
+                        None,
+                    )
+                })?;
+                let info = info.ok_or_else(|| {
+                    McpError::internal_error(
+                        "No namespaces returned when running INFO FOR ROOT".to_string(),
                         None,
                     )
                 })?;
@@ -1536,17 +1535,16 @@ It returns a list of databases with their names."#)]
             Some(response) => {
                 // Calculate the elapsed time
                 let duration = start_time.elapsed();
-                // Take the first element of the response
-                let val: Value = response
-                    .take(0)
-                    .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-                let info: ListDatabases = serde_json::from_str(
-                    &serde_json::to_string(&val)
-                        .map_err(|e| McpError::internal_error(e.to_string(), None))?,
-                )
-                .map_err(|e| {
+                // Take and deserialize the first result directly into the typed metadata shape.
+                let info: Option<ListDatabases> = response.take(0).map_err(|e| {
                     McpError::internal_error(
                         format!("No databases returned when running INFO FOR NAMESPACE: {e}"),
+                        None,
+                    )
+                })?;
+                let info = info.ok_or_else(|| {
+                    McpError::internal_error(
+                        "No databases returned when running INFO FOR NAMESPACE".to_string(),
                         None,
                     )
                 })?;
