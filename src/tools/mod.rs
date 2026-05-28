@@ -227,6 +227,7 @@ pub struct SurrealService {
     /// Timestamp when this connection was established
     pub connected_at: std::time::Instant,
     /// Router containing all available tools
+    #[allow(dead_code)]
     pub tool_router: ToolRouter<Self>,
     /// Cloud client for SurrealDB Cloud operations
     pub cloud_client: Arc<Client>,
