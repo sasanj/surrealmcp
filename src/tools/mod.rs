@@ -5,7 +5,7 @@ use rmcp::{
     ErrorData as McpError, RoleServer, ServerHandler,
     handler::server::router::tool::ToolRouter,
     handler::server::wrapper::Parameters,
-    model::{CallToolResult, Content, ServerCapabilities, ServerInfo},
+    model::{CallToolResult, ServerCapabilities, ServerInfo},
     service::RequestContext,
     tool, tool_handler, tool_router,
 };
@@ -24,7 +24,7 @@ use crate::db;
 use crate::engine;
 use crate::prompts;
 use crate::resources;
-use crate::utils::{convert_json_to_surreal, parse_target, parse_targets};
+use crate::utils::{convert_json_to_surreal, parse_target, parse_targets, timed_json_tool_result};
 
 // Global metrics
 static QUERY_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -944,6 +944,7 @@ Examples:
         &self,
         _params: Parameters<CloudParams>,
     ) -> Result<CallToolResult, McpError> {
+        let start_time = Instant::now();
         // Increment tool usage counter
         counter!("surrealmcp.tools.list_cloud_organizations").increment(1);
         // Output debugging information
@@ -971,15 +972,15 @@ Examples:
                 })
             })
             .collect();
+        let duration = start_time.elapsed();
         // Create the result JSON
-        let result = serde_json::json!({
-            "organizations": organisations,
-            "count": organisations.len()
-        });
-        // Return the MCP result
-        Ok(CallToolResult::success(vec![Content::text(
-            result.to_string(),
-        )]))
+        timed_json_tool_result(
+            duration,
+            serde_json::json!({
+                "organizations": organisations,
+                "count": organisations.len()
+            }),
+        )
     }
 
     #[tool(description = "List SurrealDB Cloud instances for a given organization")]
@@ -988,6 +989,7 @@ Examples:
         params: Parameters<CloudOrganizationParams>,
     ) -> Result<CallToolResult, McpError> {
         let CloudOrganizationParams { organization_id } = params.0;
+        let start_time = Instant::now();
         // Increment tool usage counter
         counter!("surrealmcp.tools.list_cloud_instances").increment(1);
         // Output debugging information
@@ -1022,15 +1024,15 @@ Examples:
                 })
             })
             .collect();
+        let duration = start_time.elapsed();
         // Create the result JSON
-        let result = serde_json::json!({
-            "instances": instances,
-            "count": instances.len()
-        });
-        // Return the MCP result
-        Ok(CallToolResult::success(vec![Content::text(
-            result.to_string(),
-        )]))
+        timed_json_tool_result(
+            duration,
+            serde_json::json!({
+                "instances": instances,
+                "count": instances.len()
+            }),
+        )
     }
 
     #[tool(description = "Pause SurrealDB Cloud instance")]
@@ -1039,6 +1041,7 @@ Examples:
         params: Parameters<CloudInstanceParams>,
     ) -> Result<CallToolResult, McpError> {
         let CloudInstanceParams { instance_id } = params.0;
+        let start_time = Instant::now();
         // Increment tool usage counter
         counter!("surrealmcp.tools.pause_cloud_instance").increment(1);
         // Output debugging information
@@ -1049,15 +1052,15 @@ Examples:
             .pause_instance(&instance_id)
             .await
             .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        let duration = start_time.elapsed();
         // Create the result JSON
-        let result = serde_json::json!({
-            "message": "Successfully paused cloud instance",
-            "instance": instance,
-        });
-        // Return the MCP result
-        Ok(CallToolResult::success(vec![Content::text(
-            result.to_string(),
-        )]))
+        timed_json_tool_result(
+            duration,
+            serde_json::json!({
+                "message": "Successfully paused cloud instance",
+                "instance": instance,
+            }),
+        )
     }
 
     #[tool(description = "Resume SurrealDB Cloud instance")]
@@ -1066,6 +1069,7 @@ Examples:
         params: Parameters<CloudInstanceParams>,
     ) -> Result<CallToolResult, McpError> {
         let CloudInstanceParams { instance_id } = params.0;
+        let start_time = Instant::now();
         // Increment tool usage counter
         counter!("surrealmcp.tools.resume_cloud_instance").increment(1);
         // Output debugging information
@@ -1076,15 +1080,15 @@ Examples:
             .resume_instance(&instance_id)
             .await
             .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        let duration = start_time.elapsed();
         // Create the result JSON
-        let result = serde_json::json!({
-            "message": "Successfully resumed cloud instance",
-            "instance": instance,
-        });
-        // Return the MCP result
-        Ok(CallToolResult::success(vec![Content::text(
-            result.to_string(),
-        )]))
+        timed_json_tool_result(
+            duration,
+            serde_json::json!({
+                "message": "Successfully resumed cloud instance",
+                "instance": instance,
+            }),
+        )
     }
 
     #[tool(description = "Get SurrealDB Cloud instance status")]
@@ -1093,6 +1097,7 @@ Examples:
         params: Parameters<CloudInstanceParams>,
     ) -> Result<CallToolResult, McpError> {
         let CloudInstanceParams { instance_id } = params.0;
+        let start_time = Instant::now();
         // Increment tool usage counter
         counter!("surrealmcp.tools.get_cloud_instance_status").increment(1);
         // Output debugging information
@@ -1103,17 +1108,17 @@ Examples:
             .get_instance_status(&instance_id)
             .await
             .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        let duration = start_time.elapsed();
         // Create the result JSON
-        let result = serde_json::json!({
-            "instance_id": instance_id,
-            "phase": status.phase,
-            "db_backups": status.db_backups,
-            "backup_count": status.db_backups.len()
-        });
-        // Return the MCP result
-        Ok(CallToolResult::success(vec![Content::text(
-            result.to_string(),
-        )]))
+        timed_json_tool_result(
+            duration,
+            serde_json::json!({
+                "instance_id": instance_id,
+                "phase": status.phase,
+                "db_backups": status.db_backups,
+                "backup_count": status.db_backups.len()
+            }),
+        )
     }
 
     #[tool(description = "Create SurrealDB Cloud instance")]
@@ -1125,6 +1130,7 @@ Examples:
             name,
             organization_id,
         } = params.0;
+        let start_time = Instant::now();
         // Increment tool usage counter
         counter!("surrealmcp.tools.create_cloud_instance").increment(1);
         // Output debugging information
@@ -1135,15 +1141,15 @@ Examples:
             .create_instance(&organization_id, &name)
             .await
             .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        let duration = start_time.elapsed();
         // Create the result JSON
-        let result = serde_json::json!({
-            "message": "Successfully created cloud instance",
-            "instance": instance,
-        });
-        // Return the MCP result
-        Ok(CallToolResult::success(vec![Content::text(
-            result.to_string(),
-        )]))
+        timed_json_tool_result(
+            duration,
+            serde_json::json!({
+                "message": "Successfully created cloud instance",
+                "instance": instance,
+            }),
+        )
     }
 
     /// Connect to a different SurrealDB endpoint.
@@ -1394,8 +1400,15 @@ Examples:
                     "Successfully connected to SurrealDB endpoint"
                 );
                 // Return success message
-                let msg = format!("Successfully connected to endpoint '{endpoint}'");
-                Ok(CallToolResult::success(vec![Content::text(msg)]))
+                timed_json_tool_result(
+                    duration,
+                    serde_json::json!({
+                        "endpoint": endpoint,
+                        "namespace": ns,
+                        "database": db,
+                        "message": format!("Successfully connected to endpoint '{endpoint}'"),
+                    }),
+                )
             }
             Err(e) => {
                 // Calculate the elapsed time
@@ -1482,9 +1495,7 @@ It returns a list of namespaces with their names."#)]
                     "Successfully listed available namespaces"
                 );
                 // Return the result
-                Ok(CallToolResult::success(vec![Content::text(
-                    result.to_string(),
-                )]))
+                timed_json_tool_result(duration, result)
             }
             None => {
                 // Calculate the elapsed time
@@ -1566,9 +1577,7 @@ It returns a list of databases with their names."#)]
                     "Successfully listed available databases"
                 );
                 // Return the result
-                Ok(CallToolResult::success(vec![Content::text(
-                    result.to_string(),
-                )]))
+                timed_json_tool_result(duration, result)
             }
             None => {
                 // Calculate the elapsed time
@@ -1670,9 +1679,13 @@ Examples:
                             duration_ms = duration.as_millis(),
                             "Successfully changed namespace"
                         );
-                        // Return success message
-                        let msg = format!("Successfully switched to namespace '{namespace}'");
-                        Ok(CallToolResult::success(vec![Content::text(msg)]))
+                        timed_json_tool_result(
+                            duration,
+                            serde_json::json!({
+                                "namespace": namespace,
+                                "message": format!("Successfully switched to namespace '{namespace}'"),
+                            }),
+                        )
                     }
                     Err(e) => {
                         let duration = start_time.elapsed();
@@ -1796,9 +1809,13 @@ Examples:
                             duration_ms = duration.as_millis(),
                             "Successfully changed database"
                         );
-                        // Return success message
-                        let msg = format!("Successfully switched to database '{database}'");
-                        Ok(CallToolResult::success(vec![Content::text(msg)]))
+                        timed_json_tool_result(
+                            duration,
+                            serde_json::json!({
+                                "database": database,
+                                "message": format!("Successfully switched to database '{database}'"),
+                            }),
+                        )
                     }
                     Err(e) => {
                         let duration = start_time.elapsed();
@@ -1861,6 +1878,7 @@ This is useful when you want to:
 - Ensure no active connections remain
 "#)]
     pub async fn disconnect_endpoint(&self) -> Result<CallToolResult, McpError> {
+        let start_time = Instant::now();
         // Increment tool usage metrics
         counter!("surrealmcp.tools.disconnect_endpoint").increment(1);
         // Output debugging information
@@ -1872,15 +1890,19 @@ This is useful when you want to:
         let mut db_guard = self.db.lock().await;
         // Set the database connection to None
         *db_guard = None;
+        let duration = start_time.elapsed();
         // Output debugging information
         info!(
             connection_id = %self.connection_id,
+            duration_ms = duration.as_millis(),
             "Successfully disconnected from SurrealDB endpoint"
         );
-        // Return success message
-        Ok(CallToolResult::success(vec![Content::text(
-            "Successfully disconnected from SurrealDB endpoint".to_string(),
-        )]))
+        timed_json_tool_result(
+            duration,
+            serde_json::json!({
+                "message": "Successfully disconnected from SurrealDB endpoint",
+            }),
+        )
     }
 
     /// Internal query function that executes a SurrealQL query.

@@ -1,10 +1,21 @@
 from __future__ import annotations
 
+import json
 from uuid import uuid4
 
 import pytest
 
 from smoke.mcp_client import SurrealMcpStdioClient, extract_text_content
+
+
+def _parse_query_payload(payload: object) -> dict[str, object]:
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    assert isinstance(payload, dict)
+    assert isinstance(payload.get("query"), str)
+    assert isinstance(payload.get("duration_ms"), int)
+    assert isinstance(payload.get("result"), list)
+    return payload
 
 
 @pytest.mark.anyio
@@ -24,23 +35,40 @@ async def test_query_tool_create_select_delete_roundtrip(
 
         try:
             create_result = await mcp_client.call_tool("query", {"query": create_query})
-            create_text = extract_text_content(create_result)
-            assert "smoke_e2e" in create_text
-            assert record_key in create_text
-            assert marker in create_text
+            create_payload = _parse_query_payload(extract_text_content(create_result))
+            create_rows = create_payload["result"]
+            assert isinstance(create_rows, list)
+            assert create_rows
+            first_create_row = create_rows[0]
+            assert isinstance(first_create_row, dict)
+            assert first_create_row.get("id") == f"smoke_e2e:{record_key}"
+            assert first_create_row.get("marker") == marker
+            assert first_create_row.get("n") == 42
+            assert first_create_row.get("source") == "smoke"
 
             select_result = await mcp_client.call_tool("query", {"query": select_query})
-            select_text = extract_text_content(select_result)
-            assert "smoke_e2e" in select_text
-            assert record_key in select_text
-            assert marker in select_text
+            select_payload = _parse_query_payload(extract_text_content(select_result))
+            select_rows = select_payload["result"]
+            assert isinstance(select_rows, list)
+            assert select_rows
+            first_select_row = select_rows[0]
+            assert isinstance(first_select_row, dict)
+            assert first_select_row.get("id") == f"smoke_e2e:{record_key}"
+            assert first_select_row.get("marker") == marker
+            assert first_select_row.get("n") == 42
+            assert first_select_row.get("source") == "smoke"
 
             parameterized_result = await mcp_client.call_tool(
                 "query",
                 {"query": parameterized_query, "parameters": {"marker": marker}},
             )
-            parameterized_text = extract_text_content(parameterized_result)
-            assert record_key in parameterized_text
-            assert marker in parameterized_text
+            parameterized_payload = _parse_query_payload(extract_text_content(parameterized_result))
+            parameterized_rows = parameterized_payload["result"]
+            assert isinstance(parameterized_rows, list)
+            assert parameterized_rows
+            first_parameterized_row = parameterized_rows[0]
+            assert isinstance(first_parameterized_row, dict)
+            assert first_parameterized_row.get("id") == f"smoke_e2e:{record_key}"
+            assert first_parameterized_row.get("marker") == marker
         finally:
             await mcp_client.call_tool("query", {"query": delete_query})

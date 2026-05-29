@@ -1,11 +1,13 @@
 use anyhow::Result;
 use metrics::{counter, histogram};
-use rmcp::model::Content;
+use serde_json::Value as JsonValue;
 use std::time::Instant;
 use std::{collections::HashMap, time::Duration};
 use surrealdb::types::Value;
 use surrealdb::{Surreal, engine::any::Any};
 use tracing::{debug, error, info};
+
+use crate::utils::timed_json_tool_result;
 
 /// Response from executing a SurrealDB query
 #[derive(Debug)]
@@ -25,14 +27,42 @@ pub struct Response {
 
 impl Response {
     /// Convert the response to an MCP Tool Result
-    pub fn to_mcp_result(&self) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
-        if let Some(res) = &self.result {
-            Ok(rmcp::model::CallToolResult::success(vec![Content::text(
-                format!("{res:?}"),
-            )]))
+    pub fn to_mcp_result(self) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
+        let Response {
+            query,
+            duration,
+            error,
+            result,
+            ..
+        } = self;
+
+        if let Some(mut res) = result {
+            // Build a JSON array of per-statement results using SurrealDB's
+            // plain JSON conversion helper rather than serde's tagged enum
+            // representation.
+            let mut statements: Vec<JsonValue> = Vec::new();
+            for idx in 0..res.num_statements() {
+                match res.take::<Value>(idx) {
+                    Ok(val) => statements.push(val.into_json_value()),
+                    Err(e) => statements.push(JsonValue::String(format!("error: {}", e))),
+                }
+            }
+
+            let result = match statements.len() {
+                0 => JsonValue::Array(Vec::new()),
+                1 => statements.into_iter().next().unwrap_or(JsonValue::Null),
+                _ => JsonValue::Array(statements),
+            };
+
+            timed_json_tool_result(
+                duration,
+                serde_json::json!({
+                    "query": query,
+                    "result": result,
+                }),
+            )
         } else {
-            let error_msg = self
-                .error
+            let error_msg = error
                 .as_ref()
                 .unwrap_or(&"Unknown error".to_string())
                 .clone();

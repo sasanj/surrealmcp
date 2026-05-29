@@ -1,3 +1,6 @@
+use rmcp::{ErrorData as McpError, model::{CallToolResult, Content}};
+use serde_json::{Map, Value as JsonValue};
+
 /// Generate a unique connection ID
 pub fn generate_connection_id() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -28,6 +31,37 @@ pub fn format_duration(duration: std::time::Duration) -> String {
         let seconds = total_secs % 60;
         format!("{hours}h {minutes}m {seconds}s")
     }
+}
+
+/// Add a duration field to a JSON object payload.
+pub fn with_duration_ms(duration: std::time::Duration, payload: JsonValue) -> JsonValue {
+    match payload {
+        JsonValue::Object(mut object) => {
+            object.insert("duration_ms".to_string(), serde_json::json!(duration.as_millis()));
+            JsonValue::Object(object)
+        }
+        other => {
+            let mut object = Map::new();
+            object.insert("duration_ms".to_string(), serde_json::json!(duration.as_millis()));
+            object.insert("result".to_string(), other);
+            JsonValue::Object(object)
+        }
+    }
+}
+
+/// Serialize a JSON payload into an MCP tool result.
+pub fn json_tool_result(payload: JsonValue) -> Result<CallToolResult, McpError> {
+    let text = serde_json::to_string(&payload)
+        .map_err(|e| McpError::internal_error(format!("Failed to serialize tool response payload: {e}"), None))?;
+    Ok(CallToolResult::success(vec![Content::text(text)]))
+}
+
+/// Add duration metadata and serialize a JSON payload into an MCP tool result.
+pub fn timed_json_tool_result(
+    duration: std::time::Duration,
+    payload: JsonValue,
+) -> Result<CallToolResult, McpError> {
+    json_tool_result(with_duration_ms(duration, payload))
 }
 
 /// Convert various types to SurrealDB Value
@@ -258,6 +292,19 @@ mod tests {
         assert!(val_str.contains("true"));
         assert!(val_str.contains("nested"));
         assert!(val_str.contains("value"));
+    }
+
+    #[test]
+    fn test_with_duration_ms_adds_duration_to_object() {
+        let payload = with_duration_ms(std::time::Duration::from_millis(7), json!({"message": "ok"}));
+        assert_eq!(payload["duration_ms"], json!(7));
+        assert_eq!(payload["message"], json!("ok"));
+    }
+
+    #[test]
+    fn test_timed_json_tool_result_serializes_json_object() {
+        let result = timed_json_tool_result(std::time::Duration::from_millis(9), json!({"message": "ok"}));
+        assert!(result.is_ok());
     }
 
     #[test]

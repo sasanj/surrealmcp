@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import shlex
 from dataclasses import dataclass
@@ -19,6 +20,7 @@ class ServerProcessConfig:
     command: str
     args: list[str]
     cwd: Path
+    log_level: str | None = None
 
 
 @dataclass(frozen=True)
@@ -41,7 +43,11 @@ class SmokeSettings:
                 "SURREALDB_PASS": self.surrealdb_pass,
             }
         )
-        env.setdefault("RUST_LOG", "warn")
+        if self.server.log_level:
+            env["LOG_LEVEL"] = self.server.log_level
+            env["RUST_LOG"] = "warn"
+        else:
+            env.setdefault("RUST_LOG", "warn")
         return env
 
 
@@ -72,11 +78,26 @@ def _resolve_server_process() -> ServerProcessConfig:
 
 
 def load_settings() -> SmokeSettings:
+    """Load smoke test settings from environment variables.
+
+    Raises a RuntimeError if a required environment variable is missing.
+    """
+    proc = _resolve_server_process()
+    log_level = os.getenv("LOG_LEVEL")
+    if log_level:
+        proc = ServerProcessConfig(command=proc.command, args=proc.args, cwd=proc.cwd, log_level=log_level)
+        # Initialize Python logging for the test process when LOG_LEVEL is set
+        try:
+            level = int(log_level)
+        except Exception:
+            level = getattr(logging, log_level.upper(), logging.INFO)
+        logging.basicConfig(level=level)
+        logging.getLogger(__name__).info("Initialized logging at level %s", log_level)
     return SmokeSettings(
         surrealdb_url=_read_required_env("SURREALDB_URL"),
         surrealdb_ns=_read_required_env("SURREALDB_NS"),
         surrealdb_db=_read_required_env("SURREALDB_DB"),
         surrealdb_user=_read_required_env("SURREALDB_USER"),
         surrealdb_pass=_read_required_env("SURREALDB_PASS"),
-        server=_resolve_server_process(),
+        server=proc,
     )
